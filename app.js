@@ -31,8 +31,27 @@
  {const t=rows.findLast(r=>r.date<=today),v=t?{factory:t.factory,transit:t.transit,site:t.site,used:t.used,remaining:t.remaining}:{factory:settings.initialFactory,transit:0,site:settings.initialSite,used:settings.initialUsed,remaining:round2(settings.total-settings.initialUsed)};
   const items=[['工場在庫',v.factory],...(v.transit>0?[['輸送中',v.transit]]:[]),['現場在庫',v.site],['施工済み',v.used],['未施工',v.remaining]];
   $('cards').innerHTML='<div class="todayBar"><span class="todayLabel">'+today.slice(5).replace('-','/')+' 時点（'+modeLabel()+'）</span>'+items.map(([l,n])=>'<span class="todayItem'+(n<0?' negative':'')+'">'+l+'<b>'+fmt(n)+'</b>本</span>').join('')+'<span class="todayTotal">全 '+fmt(settings.total)+' 本</span></div>';}
- const year=+month.slice(0,4),mon=+month.slice(5),days=new Date(Date.UTC(year,mon,0)).getUTCDate(),dates=Array.from({length:days},(_,i)=>month+'-'+String(i+1).padStart(2,'0')),map=new Map(shown.map(r=>[r.date,r]));
- let html='<thead><tr><th>日付 / '+modeLabel()+'</th>'+dates.map(d=>{let r=map.get(d),off=r?.offSite||E.holidays[d];return '<th class="'+(off?'off ':'')+(d===today?'today':'')+'" title="'+esc(off||'')+'"><button data-date="'+d+'" '+(!r?'disabled':'')+'>'+Number(d.slice(8))+'<small>'+'日月火水木金土'[E.date(d).getUTCDay()]+'</small></button></th>';}).join('')+'</tr></thead><tbody>';
+ $('calendar').innerHTML=monthTable(month,false);$('calendar').querySelectorAll('[data-date]').forEach(b=>b.onclick=()=>openDay(b.dataset.date));
+ const missing=shown.filter(r=>!r.recorded).length;$('monthNote').textContent=mode==='plan'?'空欄は0本です。下線のある数量は日別の手入力。出荷の台数・施工済みのその日の本数は、数字にマウスを置くと表示します。現場在庫がマイナス（赤）の日は搬入不足です。':'この月の実績未入力：'+missing+'日。実績ゼロの日も0を入力して保存してください。';
+ $('rulesPreview').innerHTML=settings.rules.map(r=>'<div class="rulePill">'+r.from+'〜'+r.to+'本目　<strong>'+fmt(r.rate)+'本／日</strong></div>').join('');let complete=rows.find(r=>r.used>=settings.total);$('completion').textContent=modeLabel()+'の施工完了：'+(complete?complete.date:'表示期間内に完了しません');
+ let alerts=[];if(conflictText)alerts.push({warn:true,text:conflictText});if(firstShort)alerts.push({warn:true,text:firstShort.date+' から現場残量が不足します（初日 '+fmt(firstShort.site)+'本）'});let others=rows.filter(r=>r.errors.some(e=>e!=='現場在庫不足'));if(others.length)alerts.push({warn:true,text:others[0].date+'：'+others[0].errors.join('、')+'（該当 '+others.length+'日）'});if(!connected)alerts.push({text:'共有未接続です。この端末での入力は業者の画面には反映されません。'});for(const r of shown.filter(r=>r.note).slice(-4))alerts.push({text:r.date+'　'+r.note});if(!alerts.length)alerts.push({text:'数量の不整合・連絡メモはありません。'});renderProposals();$('alerts').innerHTML=alerts.map(a=>'<div class="alert '+(a.warn?'warning':'')+'">'+esc(a.text)+'</div>').join('');
+ }
+ let propCache={key:'',value:null};
+ function md(d){return +d.slice(5,7)+'/'+ +d.slice(8);}
+ function renderProposals(){
+  const box=$('proposals');if(mode!=='plan'){box.innerHTML='';return;}
+  const key=JSON.stringify([settings,records]);if(propCache.key!==key)propCache={key,value:E.proposals(settings,records)};const p=propCache.value;
+  if(!p){box.innerHTML='';return;}
+  const label={delay:o=>'① 施工開始を <b>'+md(o.siteStart)+'</b> に遅らせる',rate:o=>'② 日進を <b>'+fmt(o.rate)+'本／日</b> に抑える',pause:o=>'③ <b>'+md(o.from)+(o.to!==o.from?'〜'+md(o.to):'')+'</b> を中断し、<b>'+md(o.resume)+'</b> に再開'};
+  const note={delay:o=>'現在の施工開始 '+md(settings.siteStart)+'。以後は日進どおり連続施工できます。',rate:o=>'全区間の上限を'+fmt(o.rate)+'本／日にします。開始日は変えません。',pause:o=>'現場の休工期間「材料待ち中断」を追加します。再開後は不足しません。'};
+  box.innerHTML='<div class="proposalBox"><h4>'+md(p.shortDate)+' から現場在庫が不足します（'+fmt(p.shortQty)+'本）</h4><p>このままの計画では施工完了 '+(p.baseDone||'未定')+' ですが、途中で管が足りません。対策案（計画への反映はボタンを押したときだけです）：</p>'+
+   (p.options.length?p.options.map((o,i)=>'<div class="proposal"><div>'+label[o.type](o)+'　→ 施工完了 <b>'+o.done+'</b><small>'+note[o.type](o)+'</small></div><button type="button" data-proposal="'+i+'">この案を適用</button></div>').join(''):'<p>自動で見つかる対策案がありません。製造ペースや出荷条件を見直してください。</p>')+'</div>';
+  box.querySelectorAll('[data-proposal]').forEach(b=>b.onclick=async()=>{const o=p.options[+b.dataset.proposal];if(!confirm('この案を工程の設定に反映します。\n'+b.parentElement.innerText.replace('この案を適用','').trim()+'\n\n元に戻す場合は「工程の設定」から変更してください。'))return;const next=E.applyProposal(settings,o);const err=E.validate(next);if(err.length){toast(err.join('／'));return;}try{await save('settings',next);}catch(e){toast(e.message);}});
+ }
+ $('resetInitialFactoryBtn').onclick=async()=>{if(busy)return;try{await save('settings',{...structuredClone(settings),initialFactory:0});}catch(err){toast(err.message);}};
+ function monthTable(m,forPrint){const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Tokyo'}).format(new Date()),shown=rows.filter(r=>r.date.startsWith(m));
+ const year=+m.slice(0,4),mon=+m.slice(5),days=new Date(Date.UTC(year,mon,0)).getUTCDate(),dates=Array.from({length:days},(_,i)=>m+'-'+String(i+1).padStart(2,'0')),map=new Map(shown.map(r=>[r.date,r]));
+ let html='<thead><tr><th>日付 / '+modeLabel()+'</th>'+dates.map(d=>{let r=map.get(d),off=r?.offSite||E.holidays[d];return '<th class="'+(off?'off ':'')+(d===today?'today':'')+'" title="'+esc(off||'')+'">'+(forPrint?Number(d.slice(8))+'<small>'+'日月火水木金土'[E.date(d).getUTCDay()]+'</small>':'<button data-date="'+d+'" '+(!r?'disabled':'')+'>'+Number(d.slice(8))+'<small>'+'日月火水木金土'[E.date(d).getUTCDay()]+'</small></button>')+'</th>';}).join('')+'</tr></thead><tbody>';
  const metrics=[['工場','','section'],['製造完了','production','factory'],['工場在庫','factory','balance'],['出荷','shipment','factory'],['現場','','section'],['搬入','arrival','site'],['搬入済み（累計）','arrived','site'],['施工済み（累計）','used','site'],['現場在庫','site','balance'],['連絡メモ','note','note']];
  const siteSec=new Set(['arrival','arrived','used','site']),doneDay=rows.find(r=>r.used>=settings.total-1e-9)?.date||'9999';
  for(const [label,key,kind] of metrics){
@@ -54,24 +73,7 @@
     :key==='note'?r.note:(off||'');
    html+='<td class="'+key+' '+(warning?'bad ':'')+(off?'off ':'')+(Object.hasOwn(o,key)?'override':'')+'" title="'+esc(title)+'">'+esc(text)+'</td>';}
   html+='</tr>';}
- $('calendar').innerHTML=html+'</tbody>';$('calendar').querySelectorAll('[data-date]').forEach(b=>b.onclick=()=>openDay(b.dataset.date));
- const missing=shown.filter(r=>!r.recorded).length;$('monthNote').textContent=mode==='plan'?'空欄は0本です。下線のある数量は日別の手入力。出荷の台数・施工済みのその日の本数は、数字にマウスを置くと表示します。現場在庫がマイナス（赤）の日は搬入不足です。':'この月の実績未入力：'+missing+'日。実績ゼロの日も0を入力して保存してください。';
- $('rulesPreview').innerHTML=settings.rules.map(r=>'<div class="rulePill">'+r.from+'〜'+r.to+'本目　<strong>'+fmt(r.rate)+'本／日</strong></div>').join('');let complete=rows.find(r=>r.used>=settings.total);$('completion').textContent=modeLabel()+'の施工完了：'+(complete?complete.date:'表示期間内に完了しません');
- let alerts=[];if(conflictText)alerts.push({warn:true,text:conflictText});if(firstShort)alerts.push({warn:true,text:firstShort.date+' から現場残量が不足します（初日 '+fmt(firstShort.site)+'本）'});let others=rows.filter(r=>r.errors.some(e=>e!=='現場在庫不足'));if(others.length)alerts.push({warn:true,text:others[0].date+'：'+others[0].errors.join('、')+'（該当 '+others.length+'日）'});if(!connected)alerts.push({text:'共有未接続です。この端末での入力は業者の画面には反映されません。'});for(const r of shown.filter(r=>r.note).slice(-4))alerts.push({text:r.date+'　'+r.note});if(!alerts.length)alerts.push({text:'数量の不整合・連絡メモはありません。'});renderProposals();$('alerts').innerHTML=alerts.map(a=>'<div class="alert '+(a.warn?'warning':'')+'">'+esc(a.text)+'</div>').join('');
- }
- let propCache={key:'',value:null};
- function md(d){return +d.slice(5,7)+'/'+ +d.slice(8);}
- function renderProposals(){
-  const box=$('proposals');if(mode!=='plan'){box.innerHTML='';return;}
-  const key=JSON.stringify([settings,records]);if(propCache.key!==key)propCache={key,value:E.proposals(settings,records)};const p=propCache.value;
-  if(!p){box.innerHTML='';return;}
-  const label={delay:o=>'① 施工開始を <b>'+md(o.siteStart)+'</b> に遅らせる',rate:o=>'② 日進を <b>'+fmt(o.rate)+'本／日</b> に抑える',pause:o=>'③ <b>'+md(o.from)+(o.to!==o.from?'〜'+md(o.to):'')+'</b> を中断し、<b>'+md(o.resume)+'</b> に再開'};
-  const note={delay:o=>'現在の施工開始 '+md(settings.siteStart)+'。以後は日進どおり連続施工できます。',rate:o=>'全区間の上限を'+fmt(o.rate)+'本／日にします。開始日は変えません。',pause:o=>'現場の休工期間「材料待ち中断」を追加します。再開後は不足しません。'};
-  box.innerHTML='<div class="proposalBox"><h4>'+md(p.shortDate)+' から現場在庫が不足します（'+fmt(p.shortQty)+'本）</h4><p>このままの計画では施工完了 '+(p.baseDone||'未定')+' ですが、途中で管が足りません。対策案（計画への反映はボタンを押したときだけです）：</p>'+
-   (p.options.length?p.options.map((o,i)=>'<div class="proposal"><div>'+label[o.type](o)+'　→ 施工完了 <b>'+o.done+'</b><small>'+note[o.type](o)+'</small></div><button type="button" data-proposal="'+i+'">この案を適用</button></div>').join(''):'<p>自動で見つかる対策案がありません。製造ペースや出荷条件を見直してください。</p>')+'</div>';
-  box.querySelectorAll('[data-proposal]').forEach(b=>b.onclick=async()=>{const o=p.options[+b.dataset.proposal];if(!confirm('この案を工程の設定に反映します。\n'+b.parentElement.innerText.replace('この案を適用','').trim()+'\n\n元に戻す場合は「工程の設定」から変更してください。'))return;const next=E.applyProposal(settings,o);const err=E.validate(next);if(err.length){toast(err.join('／'));return;}try{await save('settings',next);}catch(e){toast(e.message);}});
- }
- $('resetInitialFactoryBtn').onclick=async()=>{if(busy)return;try{await save('settings',{...structuredClone(settings),initialFactory:0});}catch(err){toast(err.message);}};
+ return html+'</tbody>';}
  function round2(x){return Math.round(x*100)/100;}
  function modeLabel(){return mode==='plan'?'計画':'実績';}
  function openDay(d){daySelected=d;const r=rows.find(x=>x.date===d),v=records[d]||{};$('dayTitle').textContent=d+' の'+modeLabel();$('dayHelp').textContent=mode==='plan'?'空欄は自動計算。0はその日の作業なしです。休工日にも手入力で計画を指定できます。':'その日の実績を入力してください。空欄項目は実績0本として記録します。';const items=[['production','製造数（本）',1],['shipment','出荷数（本）',1],['arrival','搬入数（本）',1],['usage','使用数（本）',.01]];$('dayFields').innerHTML=items.map(([key,label,step])=>'<label>'+label+'<input type="number" min="0" max="100000" step="'+step+'" name="'+key+'" value="'+esc(v[mode]?.[key]??'')+'" placeholder="'+(mode==='plan'?'自動：'+fmt(r[key]):'未入力')+'"></label>').join('');$('dayForm').elements.note.value=v.note||'';$('dayWarning').hidden=!r.errors.length;$('dayWarning').textContent=r.errors.join('、');$('dayDialog').showModal();}
@@ -92,7 +94,16 @@
  $('addRule').onclick=()=>{syncDraft();draft.rules.push({from:(draft.rules.at(-1)?.to||0)+1,to:draft.total,rate:2.5});renderSettingLists();};$('addType').onclick=()=>{syncDraft();draft.types.push({from:(draft.types.at(-1)?.to||0)+1,to:draft.total,name:''});renderSettingLists();};$('addProd').onclick=()=>{syncDraft();draft.prodRules.push({from:settings.start,to:settings.start,daily:draft.daily});renderSettingLists();};$('addBreak').onclick=()=>{syncDraft();draft.breaks.push({from:settings.start,to:settings.start,target:'all',name:'その他休工'});renderSettingLists();};$('addWork').onclick=()=>{syncDraft();draft.workdays.push({date:settings.start,target:'all'});renderSettingLists();};
  $('settingsBtn').onclick=openSettings;$('settingsReset').onclick=()=>{$('settingsDialog').close();openSettings();toast('編集内容を取り消し、保存済みの設定に戻しました');};document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;render();});$('fit').onchange=()=>$('calendarWrap').classList.toggle('fit',$('fit').checked);
  function shiftMonth(n){const d=new Date(month+'-01T00:00:00Z');d.setUTCMonth(d.getUTCMonth()+n);const m=d.toISOString().slice(0,7);if(m>=settings.start.slice(0,7)&&m<=settings.end.slice(0,7)){month=m;render();}}
- $('prevMonth').onclick=()=>shiftMonth(-1);$('nextMonth').onclick=()=>shiftMonth(1);$('monthInput').onchange=()=>{month=$('monthInput').value;render();};$('printBtn').onclick=()=>print();
+ $('prevMonth').onclick=()=>shiftMonth(-1);$('nextMonth').onclick=()=>shiftMonth(1);$('monthInput').onchange=()=>{month=$('monthInput').value;render();};$('printBtn').onclick=printMonths;
+ function printMonths(){
+  const months=[];for(let d=new Date(settings.start.slice(0,7)+'-01T00:00:00Z');d.toISOString().slice(0,7)<=settings.end.slice(0,7);d.setUTCMonth(d.getUTCMonth()+1))months.push(d.toISOString().slice(0,7));
+  const now=new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',dateStyle:'short',timeStyle:'short'}).format(new Date());
+  const head='<div class="pHead"><span><b>'+esc(settings.name)+'</b>　'+esc(settings.spec||'')+'　全'+fmt(settings.total)+'本　｜　製造 '+settings.start+' 〜 '+settings.end+'　｜　施工開始 '+settings.siteStart+'</span><span>'+modeLabel()+'　出力 '+now+'</span></div>';
+  let box=$('printArea');if(!box){box=document.createElement('div');box.id='printArea';document.body.appendChild(box);}
+  box.innerHTML=months.map(m=>'<section class="pPage">'+head+'<h2>'+m.slice(0,4)+'年 '+Number(m.slice(5))+'月</h2><table class="pTable">'+monthTable(m,true)+'</table><div class="pNote">単位：本　／　空欄は0本　／　赤：現場在庫不足　／　淡赤：休工</div></section>').join('');
+  document.body.classList.add('printingMonths');setTimeout(()=>{print();},50);
+ }
+ addEventListener('afterprint',()=>document.body.classList.remove('printingMonths'));
  $('exportBtn').onclick=()=>download('推進管バックアップ-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify({format:'pipe-app-v1',events,exportedAt:new Date().toISOString()},null,2));
  $('importBtn').onclick=()=>$('importFile').click();$('importFile').onchange=async()=>{const file=$('importFile').files[0];if(!file)return;try{if(connected)throw Error('共有接続中は読込できません。切断後、端末で確認してください。');if(file.size>20*1024*1024)throw Error('ファイルが大きすぎます');let data=JSON.parse(await file.text());if(data.format!=='pipe-app-v1')throw Error('専用バックアップを指定してください');validateEvents(data.events);if(!confirm('この端末のデータを置き換えます。現在のバックアップを先に保存してありますか？'))return;const old=events;events=data.events;try{localSave();}catch(err){events=old;throw err;}rebuild();render();toast('読み込みました');}catch(err){toast(err.message);}finally{$('importFile').value='';}};
  $('csvBtn').onclick=()=>{const selected=rows.filter(r=>r.date.startsWith(month)),cols=[['日付','date'],['製造','production'],['出荷','shipment'],['出荷台数','trucks'],['工場在庫','factory'],['輸送中','transit'],['搬入','arrival'],['使用','usage'],['累計使用','used'],['現場残量','site'],['未施工','remaining'],['実績入力済','recorded'],['連絡メモ','note']];const quote=v=>'"'+String(v??'').replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"';download('推進管_'+month+'_'+modeLabel()+'.csv','\ufeff'+[cols.map(c=>c[0]),...selected.map(r=>cols.map(([,k])=>k==='recorded'?(r.recorded?'入力済':'未入力'):mode==='actual'&&!r.recorded&&['production','shipment','trucks','arrival','usage'].includes(k)?'':r[k]))].map(row=>row.map(quote).join(',')).join('\r\n'),'text/csv;charset=utf-8');};
