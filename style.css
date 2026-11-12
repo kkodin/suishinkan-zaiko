@@ -32,3 +32,27 @@
 .proposal b{color:#18644f}.proposal small{display:block;color:#5d6f67;font-size:12px;margin-top:2px}.proposal button{white-space:nowrap;font-weight:700}
 .prodRow{display:flex;gap:8px;align-items:center;margin:10px 0;flex-wrap:wrap}.prodRow input[type=date]{width:155px}.prodRow input[type=number]{width:90px}
 @media print{.proposal button{display:none}}
+
+/* 工程の設定：上部固定の操作バーとコンパクト表示 2026-11-12 */
+#settingsDialog{padding:0;max-width:1180px;width:calc(100% - 20px);max-height:95vh}
+#settingsForm{padding:0 18px 14px}
+.stickyHead{position:sticky;top:0;z-index:5;background:#fff;margin:0 -18px 6px;padding:10px 18px;border-bottom:2px solid var(--line);box-shadow:0 4px 10px #123e3214;align-items:center;gap:12px}
+.stickyHead h2{font-size:18px;margin:0}.stickyHead .muted{margin:2px 0 0;font-size:11px;line-height:1.4}
+.headBtns{display:flex;gap:8px;align-items:center;flex-shrink:0}.headBtns button{padding:7px 14px}.headBtns .closeX{border:0;font-size:22px;padding:2px 8px;line-height:1}
+#settingsForm h3{margin:10px 0 4px;padding-top:8px;font-size:14px}
+#settingsForm .muted{font-size:11px;line-height:1.45;margin:0 0 4px}
+#settingsForm .formgrid{grid-template-columns:repeat(4,1fr);gap:6px 12px}
+#settingsForm label{font-size:11px;line-height:1.5}
+#settingsForm input,#settingsForm select{padding:4px 7px;font-size:13px}
+#settingsForm .check{margin-top:6px}
+#settingsForm .ruleRow,#settingsForm .breakRow,#settingsForm .workRow,#settingsForm .prodRow{margin:3px 0;gap:6px}
+#settingsForm .ruleRow input{width:80px}#settingsForm .delete{padding:2px 9px}
+#settingsForm .weekRow{padding:4px 10px;margin:3px 0;gap:10px}
+#settingsForm #addRule,#settingsForm #addBreak,#settingsForm #addWork,#settingsForm #addProd,#settingsForm #addType{padding:4px 10px;font-size:12px}
+.setCols{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
+@media(max-width:900px){#settingsForm .formgrid{grid-template-columns:repeat(2,1fr)}.setCols{grid-template-columns:1fr}.stickyHead{flex-wrap:wrap}}
+#settingsForm .headBtns button{font-size:14px;border:1px solid var(--line);padding:7px 16px;border-radius:7px}
+#settingsForm .headBtns button.primary{border-color:var(--green);font-weight:700}
+#settingsForm .headBtns .closeX{border:0;font-size:22px;padding:2px 8px}
+
+.settingsMsg{margin-top:6px;padding:6px 10px;border-radius:6px;font-size:13px;font-weight:700;background:#ffe3df;color:#9b1c12;border:1px solid #e8a39a}.settingsMsg.ok{background:#e3f3e8;color:#185e36;border-color:#9fd0ae}
