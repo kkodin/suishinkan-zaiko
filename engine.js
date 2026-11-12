@@ -24,7 +24,9 @@
  function demand(s,used){let left=1,n=0,pos=used;for(const r of s.rules){if(pos>=r.to)continue;if(pos<r.from-1)break;let take=Math.min(r.to-pos,r.rate*left);n+=take;pos+=take;left-=take/r.rate;if(left<1e-9)break;}return round(Math.min(n,s.total-used));}
  function run(s,records={},mode='plan'){
  let exact=s.initialUsed,f=s.initialFactory,site=s.initialSite,used=s.initialUsed,made=0,shipped=0,arrived=0,transit=0;let batches=[{day:s.start,n:s.initialFactory}],deliveries={},rows=[];
- for(let d=s.start;d<=s.end;d=add(d,1)){
+ const hardEnd=add(s.end,366);
+ for(let d=s.start;d<=hardEnd;d=add(d,1)){
+  if(d>s.end){/* 計画終了日以降も、施工済みが総本数に達するまで計算を続ける */if(used>=s.total-1e-9)break;const pending=Object.keys(deliveries).some(k=>k>=d);if(site<=1e-9&&transit<=1e-9&&f<=1e-9&&!pending&&made+s.initialFactory+s.initialSite+s.initialUsed>=s.total)break;}
   let rec=records[d]||{},r={date:d,offFactory:rest(s,d,'factory'),offTransport:rest(s,d,'transport'),offSite:rest(s,d,'site')};
   let plan=mode==='plan',o=plan?(rec.plan||{}):(rec.actual||{}),has=k=>Object.prototype.hasOwnProperty.call(o,k)&&o[k]!==''&&o[k]!==null;
   r.production=has('production')?+o.production:(plan&&!r.offFactory?Math.min(dailyOn(s,d),Math.max(0,s.total-s.initialFactory-s.initialSite-s.initialUsed-made)):0);
