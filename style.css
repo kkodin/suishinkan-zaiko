@@ -68,27 +68,25 @@
 #calendar tr.factory td.off,#calendar tr.balance td.off,#calendar tr.site td.off{background:#ffe9e1}
 @media(max-width:800px){.todayTotal{margin-left:0}.todayItem b{font-size:19px}}
 
-/* 月ごと印刷（A4横・1か月1ページ） 2026-11-12 */
+/* 月ごと印刷（A4横・2か月1ページ、ブラウザのヘッダ・フッタなし） 2026-11-12 */
 #printArea{display:none}
 @media print{
- @page{size:A4 landscape;margin:7mm}
+ @page{size:A4 landscape;margin:0}
  body.printingMonths>*:not(#printArea){display:none!important}
  body.printingMonths #printArea{display:block}
- body.printingMonths{background:#fff}
- .pPage{page-break-after:always;break-after:page}
+ body.printingMonths{background:#fff;margin:0}
+ .pPage{padding:7mm 8mm;height:209mm;box-sizing:border-box;display:flex;flex-direction:column;gap:5mm;page-break-after:always;break-after:page;overflow:hidden}
  .pPage:last-child{page-break-after:auto;break-after:auto}
- .pHead{display:flex;justify-content:space-between;font-size:9pt;color:#183328;border-bottom:1px solid #9fb2a8;padding-bottom:2mm}
- .pPage h2{font-size:14pt;margin:2mm 0}
+ .pMonth h2{font-size:11pt;margin:0 0 1mm}.pMonth h2 small{font-size:8pt;font-weight:400;margin-left:4mm;color:#444}
  .pTable{width:100%;min-width:0!important;table-layout:fixed;border-collapse:collapse;font-variant-numeric:tabular-nums}
- .pTable th,.pTable td{border:0.5pt solid #8fa49a!important;padding:3.4mm 0!important;height:auto!important;font-size:10pt!important;font-weight:600;text-align:center;overflow:hidden;box-shadow:none!important;position:static!important;background:#fff!important;color:#111!important}
+ .pTable th,.pTable td{border:0.5pt solid #8fa49a!important;padding:0.9mm 0!important;height:auto!important;line-height:1.25;font-size:8.5pt!important;font-weight:600;text-align:center;overflow:hidden;box-shadow:none!important;position:static!important;background:#fff!important;color:#111!important}
  .pTable thead th{background:#dfe9e4!important;font-weight:700}
- .pTable thead th small{display:block;font-size:8pt;color:#111!important}
- .pTable th:first-child{width:28mm;text-align:left;padding-left:1.5mm!important;font-size:9pt!important;background:#eef3f0!important}
- .pTable tr.sectionRow th{background:#3b5b6b!important;color:#fff!important;text-align:left;padding:0.8mm 2mm!important}
+ .pTable thead th small{display:inline;font-size:6.5pt;margin-left:0.5mm;color:#111!important;padding:0}
+ .pTable th:first-child{width:26mm;text-align:left;padding-left:1.5mm!important;font-size:8pt!important;background:#eef3f0!important}
+ .pTable tr.sectionRow th{background:#3b5b6b!important;color:#fff!important;text-align:left;padding:0.4mm 2mm!important;font-size:7.5pt!important}
  .pTable tr.balance td{font-weight:800;background:#eef4f1!important}
  .pTable td.off,.pTable thead th.off{background:#fde3da!important}
  .pTable td.bad{background:#ffc2ba!important;color:#8b1515!important}
- .pTable td.note{font-size:6.5pt!important;white-space:normal;text-align:left}
- .pNote{font-size:7.5pt;color:#555;margin-top:1.5mm}
+ .pTable td.note{font-size:6pt!important;white-space:nowrap;text-align:left}
  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }

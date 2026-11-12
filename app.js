@@ -97,10 +97,10 @@
  $('prevMonth').onclick=()=>shiftMonth(-1);$('nextMonth').onclick=()=>shiftMonth(1);$('monthInput').onchange=()=>{month=$('monthInput').value;render();};$('printBtn').onclick=printMonths;
  function printMonths(){
   const months=[];for(let d=new Date(settings.start.slice(0,7)+'-01T00:00:00Z');d.toISOString().slice(0,7)<=settings.end.slice(0,7);d.setUTCMonth(d.getUTCMonth()+1))months.push(d.toISOString().slice(0,7));
-  const now=new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',dateStyle:'short',timeStyle:'short'}).format(new Date());
-  const head='<div class="pHead"><span><b>'+esc(settings.name)+'</b>　'+esc(settings.spec||'')+'　全'+fmt(settings.total)+'本　｜　製造 '+settings.start+' 〜 '+settings.end+'　｜　施工開始 '+settings.siteStart+'</span><span>'+modeLabel()+'　出力 '+now+'</span></div>';
   let box=$('printArea');if(!box){box=document.createElement('div');box.id='printArea';document.body.appendChild(box);}
-  box.innerHTML=months.map(m=>'<section class="pPage">'+head+'<h2>'+m.slice(0,4)+'年 '+Number(m.slice(5))+'月</h2><table class="pTable">'+monthTable(m,true)+'</table><div class="pNote">単位：本　／　空欄は0本　／　赤：現場在庫不足　／　淡赤：休工</div></section>').join('');
+  const block=m=>'<div class="pMonth"><h2>'+m.slice(0,4)+'年 '+Number(m.slice(5))+'月<small>'+esc(settings.name)+'（'+modeLabel()+'）</small></h2><table class="pTable">'+monthTable(m,true)+'</table></div>';
+  let html='';for(let i=0;i<months.length;i+=2)html+='<section class="pPage">'+block(months[i])+(months[i+1]?block(months[i+1]):'')+'</section>';
+  box.innerHTML=html;
   document.body.classList.add('printingMonths');setTimeout(()=>{print();},50);
  }
  addEventListener('afterprint',()=>document.body.classList.remove('printingMonths'));
