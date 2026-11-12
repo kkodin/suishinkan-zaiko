@@ -3,7 +3,7 @@
  // Only the explicitly matched popup may deliver the OAuth result to its opener.
  const query=new URLSearchParams(location.search);if(query.has('state')&&window.opener&&(query.has('code')||query.has('error'))){const reply={pipeAuth:query.get('state'),code:query.get('code'),error:query.get('error_description')||query.get('error')};history.replaceState({},'',location.pathname);window.opener.postMessage(reply,location.origin);document.body.textContent='ログイン結果を返しました。この画面は閉じて構いません。';return;}
  /* ===== 公開前に設定すると、業者は共有リンクだけで接続できます（公開識別子なので秘密情報ではありません） ===== */
- const PRESET={tenant:'',client:''};
+ const PRESET={tenant:'acd238cd-b6aa-4b5a-8056-44ed0177515f',client:'2eac4f50-fcd6-4534-b5b7-0e40ba18fe0a'};
  const E=PipeEngine,$=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),fmt=v=>Number(v).toLocaleString('ja-JP',{maximumFractionDigits:2});
  const STORE='hashix.pipe.events.v1',CONFIG='hashix.pipe.connection.v1';let events=[],settings=E.defaults(),records={},heads={},conflicts=[],mode='plan',month=settings.start.slice(0,7),rows=[],busy=false,daySelected='',draft=null,connected=false;
  function toast(message){$('toast').textContent=message;$('toast').style.display='block';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').style.display='none',6500);}
