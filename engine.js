@@ -23,7 +23,7 @@
   while(list.length&&list[list.length-1].from>s.total){list.pop();notes.push(label+'で総本数を超える行を削除しました');}if(list.length&&list[list.length-1].to!==s.total){list[list.length-1].to=s.total;}}return notes;}
  function demand(s,used){let left=1,n=0,pos=used;for(const r of s.rules){if(pos>=r.to)continue;if(pos<r.from-1)break;let take=Math.min(r.to-pos,r.rate*left);n+=take;pos+=take;left-=take/r.rate;if(left<1e-9)break;}return round(Math.min(n,s.total-used));}
  function run(s,records={},mode='plan'){
- let f=s.initialFactory,site=s.initialSite,used=s.initialUsed,made=0,shipped=0,arrived=0,transit=0;let batches=[{day:s.start,n:s.initialFactory}],deliveries={},rows=[];
+ let exact=s.initialUsed,f=s.initialFactory,site=s.initialSite,used=s.initialUsed,made=0,shipped=0,arrived=0,transit=0;let batches=[{day:s.start,n:s.initialFactory}],deliveries={},rows=[];
  for(let d=s.start;d<=s.end;d=add(d,1)){
   let rec=records[d]||{},r={date:d,offFactory:rest(s,d,'factory'),offTransport:rest(s,d,'transport'),offSite:rest(s,d,'site')};
   let plan=mode==='plan',o=plan?(rec.plan||{}):(rec.actual||{}),has=k=>Object.prototype.hasOwnProperty.call(o,k)&&o[k]!==''&&o[k]!==null;
@@ -34,7 +34,7 @@
   let remain=r.shipment;for(const b of batches){if(b.day>d)continue;let n=Math.min(b.n,remain);b.n-=n;remain-=n;if(!remain)break;}f-=r.shipment;shipped+=r.shipment;transit+=r.shipment;
   if(plan&&r.shipment){let arrival=add(d,s.lead);while(rest(s,arrival,'transport')&&arrival<=add(s.end,366))arrival=add(arrival,1);deliveries[arrival]=(deliveries[arrival]||0)+r.shipment;}
   r.arrival=has('arrival')?+o.arrival:(plan?(deliveries[d]||0):0);arrived+=r.arrival;transit-=r.arrival;site+=r.arrival;
-  r.usage=has('usage')?+o.usage:(plan&&d>=s.siteStart&&!r.offSite?demand(s,used):0);let before=used;used=round(used+r.usage);site=round(site-r.usage);
+  if(has('usage')){r.usage=+o.usage;}else if(plan&&d>=s.siteStart&&!r.offSite){const next=round(exact+demand(s,exact));r.usage=Math.max(0,Math.floor(next+1e-9)-Math.floor(exact+1e-9));exact=next;}else r.usage=0;let before=used;used=round(used+r.usage);if(has('usage'))exact=used;site=round(site-r.usage);
   Object.assign(r,{factory:round(f),transit:round(transit),site,used,manufactured:made,shipped,arrived,remaining:round(s.total-used),trucks:Math.ceil(r.shipment/s.truck),note:rec.note||'',recorded:!!rec.actual,types:s.types.map(t=>({name:t.name,n:round(Math.max(0,Math.min(used,t.to)-Math.max(before,t.from-1)))})).filter(t=>t.n>0)});
   r.errors=[];if(f<0)r.errors.push('工場在庫不足');if(transit<0)r.errors.push('出荷数より搬入数が多い');if(site<0)r.errors.push('現場在庫不足');if(used>s.total)r.errors.push('総本数超過');if(made+s.initialFactory+s.initialSite+s.initialUsed>s.total)r.errors.push('製造超過');if(remain>0)r.errors.push('養生前または製造前の出荷');rows.push(r);
  }

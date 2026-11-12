@@ -32,7 +32,7 @@
   const items=[['工場在庫',v.factory],...(v.transit>0?[['輸送中',v.transit]]:[]),['現場在庫',v.site],['施工済み',v.used],['未施工',v.remaining]];
   $('cards').innerHTML='<div class="todayBar"><span class="todayLabel">'+today.slice(5).replace('-','/')+' 時点（'+modeLabel()+'）</span>'+items.map(([l,n])=>'<span class="todayItem'+(n<0?' negative':'')+'">'+l+'<b>'+fmt(n)+'</b>本</span>').join('')+'<span class="todayTotal">全 '+fmt(settings.total)+' 本</span></div>';}
  $('calendar').innerHTML=monthTable(month,false);$('calendar').querySelectorAll('[data-date]').forEach(b=>b.onclick=()=>openDay(b.dataset.date));
- const missing=shown.filter(r=>!r.recorded).length;$('monthNote').textContent=mode==='plan'?'空欄は0本です。下線のある数量は日別の手入力。出荷の台数・施工済みのその日の本数は、数字にマウスを置くと表示します。現場在庫がマイナス（赤）の日は搬入不足です。':'この月の実績未入力：'+missing+'日。実績ゼロの日も0を入力して保存してください。';
+ const missing=shown.filter(r=>!r.recorded).length;$('monthNote').textContent=mode==='plan'?'空欄は0本です。下線のある数量は日別の手入力。出荷の台数・使用数の管種内訳は、数字にマウスを置くと表示します。現場在庫がマイナス（赤）の日は搬入不足です。':'この月の実績未入力：'+missing+'日。実績ゼロの日も0を入力して保存してください。';
  $('rulesPreview').innerHTML=settings.rules.map(r=>'<div class="rulePill">'+r.from+'〜'+r.to+'本目　<strong>'+fmt(r.rate)+'本／日</strong></div>').join('');let complete=rows.find(r=>r.used>=settings.total);$('completion').textContent=modeLabel()+'の施工完了：'+(complete?complete.date:'表示期間内に完了しません');
  let alerts=[];if(conflictText)alerts.push({warn:true,text:conflictText});if(firstShort)alerts.push({warn:true,text:firstShort.date+' から現場残量が不足します（初日 '+fmt(firstShort.site)+'本）'});let others=rows.filter(r=>r.errors.some(e=>e!=='現場在庫不足'));if(others.length)alerts.push({warn:true,text:others[0].date+'：'+others[0].errors.join('、')+'（該当 '+others.length+'日）'});if(!connected)alerts.push({text:'共有未接続です。この端末での入力は業者の画面には反映されません。'});for(const r of shown.filter(r=>r.note).slice(-4))alerts.push({text:r.date+'　'+r.note});if(!alerts.length)alerts.push({text:'数量の不整合・連絡メモはありません。'});renderProposals();$('alerts').innerHTML=alerts.map(a=>'<div class="alert '+(a.warn?'warning':'')+'">'+esc(a.text)+'</div>').join('');
  }
@@ -52,15 +52,15 @@
  function monthTable(m,forPrint){const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Tokyo'}).format(new Date()),shown=rows.filter(r=>r.date.startsWith(m));
  const year=+m.slice(0,4),mon=+m.slice(5),days=new Date(Date.UTC(year,mon,0)).getUTCDate(),dates=Array.from({length:days},(_,i)=>m+'-'+String(i+1).padStart(2,'0')),map=new Map(shown.map(r=>[r.date,r]));
  let html='<thead><tr><th>日付 / '+modeLabel()+'</th>'+dates.map(d=>{let r=map.get(d),off=r?.offSite||E.holidays[d];return '<th class="'+(off?'off ':'')+(d===today?'today':'')+'" title="'+esc(off||'')+'">'+(forPrint?Number(d.slice(8))+'<small>'+'日月火水木金土'[E.date(d).getUTCDay()]+'</small>':'<button data-date="'+d+'" '+(!r?'disabled':'')+'>'+Number(d.slice(8))+'<small>'+'日月火水木金土'[E.date(d).getUTCDay()]+'</small></button>')+'</th>';}).join('')+'</tr></thead><tbody>';
- const metrics=[['工場','','section'],['製造完了','production','factory'],['工場在庫','factory','balance'],['出荷','shipment','factory'],['現場','','section'],['搬入','arrival','site'],['搬入済み（累計）','arrived','site'],['施工済み（累計）','used','site'],['現場在庫','site','balance'],['連絡メモ','note','note']];
- const siteSec=new Set(['arrival','arrived','used','site']),doneDay=rows.find(r=>r.used>=settings.total-1e-9)?.date||'9999';
+ const metrics=[['工場','','section'],['製造完了','production','factory'],['工場在庫','factory','balance'],['出荷','shipment','factory'],['現場','','section'],['搬入','arrival','site'],['搬入済み（累計）','arrived','site'],['使用数（当日）','usage','site'],['施工済み（累計）','used','site'],['現場在庫','site','balance'],['連絡メモ','note','note']];
+ const siteSec=new Set(['arrival','arrived','usage','used','site']),doneDay=rows.find(r=>r.used>=settings.total-1e-9)?.date||'9999';
  for(const [label,key,kind] of metrics){
   if(kind==='section'){html+='<tr class="sectionRow"><th colspan="'+(dates.length+1)+'">'+label+'</th></tr>';continue;}
   html+='<tr class="'+kind+'"><th>'+label+'</th>';
   for(const d of dates){const r=map.get(d);if(!r){html+='<td></td>';continue;}
    const o=records[d]?.[mode]||{},value=r[key],noActual=mode==='actual'&&!r.recorded;let text;
    if(key==='note')text=value||'';
-   else if(['production','shipment','arrival'].includes(key))text=(value===0||noActual)?'':fmt(value);
+   else if(['production','shipment','arrival','usage'].includes(key))text=(value===0||noActual)?'':fmt(value);
    else if(key==='arrived'||key==='used')text=value===0?'':fmt(value);
    else if(key==='factory')text=value===0?'':fmt(value);
    else if(key==='site')text=(value===0&&!(d>=settings.siteStart&&d<=doneDay&&!r.offSite))?'':fmt(value);
@@ -69,14 +69,14 @@
    const off=siteSec.has(key)?r.offSite:key==='note'?'':r.offFactory;
    const title=key==='factory'?'開始前 '+fmt(settings.initialFactory)+' ＋ 累計製造 '+fmt(r.manufactured)+' − 累計出荷 '+fmt(r.shipped)+' ＝ '+fmt(r.factory)+'本'
     :key==='shipment'?(r.shipment?r.trucks+'台'+(r.transit>0?'／輸送中 '+fmt(r.transit)+'本':''):'')
-    :key==='used'?(r.usage?'この日の施工 '+fmt(r.usage)+'本（'+r.types.map(t=>t.name+' '+fmt(t.n)+'本').join(' / ')+'）':'')
+    :key==='usage'?r.types.map(t=>t.name+' '+fmt(t.n)+'本').join(' / ')
     :key==='note'?r.note:(off||'');
    html+='<td class="'+key+' '+(warning?'bad ':'')+(off?'off ':'')+(Object.hasOwn(o,key)?'override':'')+'" title="'+esc(title)+'">'+esc(text)+'</td>';}
   html+='</tr>';}
  return html+'</tbody>';}
  function round2(x){return Math.round(x*100)/100;}
  function modeLabel(){return mode==='plan'?'計画':'実績';}
- function openDay(d){daySelected=d;const r=rows.find(x=>x.date===d),v=records[d]||{};$('dayTitle').textContent=d+' の'+modeLabel();$('dayHelp').textContent=mode==='plan'?'空欄は自動計算。0はその日の作業なしです。休工日にも手入力で計画を指定できます。':'その日の実績を入力してください。空欄項目は実績0本として記録します。';const items=[['production','製造数（本）',1],['shipment','出荷数（本）',1],['arrival','搬入数（本）',1],['usage','使用数（本）',.01]];$('dayFields').innerHTML=items.map(([key,label,step])=>'<label>'+label+'<input type="number" min="0" max="100000" step="'+step+'" name="'+key+'" value="'+esc(v[mode]?.[key]??'')+'" placeholder="'+(mode==='plan'?'自動：'+fmt(r[key]):'未入力')+'"></label>').join('');$('dayForm').elements.note.value=v.note||'';$('dayWarning').hidden=!r.errors.length;$('dayWarning').textContent=r.errors.join('、');$('dayDialog').showModal();}
+ function openDay(d){daySelected=d;const r=rows.find(x=>x.date===d),v=records[d]||{};$('dayTitle').textContent=d+' の'+modeLabel();$('dayHelp').textContent=mode==='plan'?'空欄は自動計算。0はその日の作業なしです。休工日にも手入力で計画を指定できます。':'その日の実績を入力してください。空欄項目は実績0本として記録します。';const items=[['production','製造数（本）',1],['shipment','出荷数（本）',1],['arrival','搬入数（本）',1],['usage','使用数（本）',1]];$('dayFields').innerHTML=items.map(([key,label,step])=>'<label>'+label+'<input type="number" min="0" max="100000" step="'+step+'" name="'+key+'" value="'+esc(v[mode]?.[key]??'')+'" placeholder="'+(mode==='plan'?'自動：'+fmt(r[key]):'未入力')+'"></label>').join('');$('dayForm').elements.note.value=v.note||'';$('dayWarning').hidden=!r.errors.length;$('dayWarning').textContent=r.errors.join('、');$('dayDialog').showModal();}
  $('dayForm').onsubmit=async event=>{event.preventDefault();let value=structuredClone(records[daySelected]||{}),data={},form=event.target;for(const k of ['production','shipment','arrival','usage']){const raw=form.elements[k].value;if(raw!==''||mode==='actual')data[k]=raw===''?0:Number(raw);}value[mode]=data;value.note=form.elements.note.value.trim();try{if(await save('day:'+daySelected,value))$('dayDialog').close();}catch(err){toast(err.message);}};
  const fieldDefs=[['name','工事名','text'],['spec','管仕様','text'],['total','総本数','number'],['start','製造開始日','date'],['end','計画終了日','date'],['siteStart','施工開始日','date'],['daily','1日当たり製造本数','number'],['truck','1台に載る本数（出荷単位）','number'],['curing','養生日数（暦日）','number'],['lead','輸送日数（暦日）','number'],['initialFactory','開始日前の工場在庫','number'],['initialSite','開始日前の現場在庫','number'],['initialUsed','開始日前の使用累計','number']];
  function targetOptions(selected){return [['all','全体'],['factory','工場'],['transport','出荷・搬入'],['site','現場']].map(([v,l])=>'<option value="'+v+'" '+(selected===v?'selected':'')+'>'+l+'</option>').join('');}
