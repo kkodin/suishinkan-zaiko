@@ -56,3 +56,14 @@
 #settingsForm .headBtns .closeX{border:0;font-size:22px;padding:2px 8px}
 
 .settingsMsg{margin-top:6px;padding:6px 10px;border-radius:6px;font-size:13px;font-weight:700;background:#ffe3df;color:#9b1c12;border:1px solid #e8a39a}.settingsMsg.ok{background:#e3f3e8;color:#185e36;border-color:#9fd0ae}
+
+/* 本日時点の要約バーと工場／現場の区分 2026-11-12 */
+.cards{display:block;margin:10px 0 14px}
+.todayBar{display:flex;align-items:center;flex-wrap:wrap;gap:6px 22px;background:#fff;border:1px solid var(--line);border-left:5px solid #176343;border-radius:8px;padding:10px 16px}
+.todayLabel{font-size:12px;color:var(--muted);font-weight:700}
+.todayItem{font-size:13px;color:#314e40;font-weight:700}.todayItem b{font-size:22px;margin:0 3px 0 8px;color:#183328;font-variant-numeric:tabular-nums}
+.todayItem.negative,.todayItem.negative b{color:#b52e2e}
+.todayTotal{margin-left:auto;font-size:12px;color:var(--muted)}
+#calendar tr.sectionRow th{background:#173d4d;color:#fff;font-size:13px;padding:4px 16px;height:auto;text-align:left;position:sticky;left:0}
+#calendar tr.factory td.off,#calendar tr.balance td.off,#calendar tr.site td.off{background:#ffe9e1}
+@media(max-width:800px){.todayTotal{margin-left:0}.todayItem b{font-size:19px}}
