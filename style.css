@@ -68,25 +68,42 @@
 #calendar tr.factory td.off,#calendar tr.balance td.off,#calendar tr.site td.off{background:#ffe9e1}
 @media(max-width:800px){.todayTotal{margin-left:0}.todayItem b{font-size:19px}}
 
-/* 月ごと印刷（A4横・2か月1ページ、ブラウザのヘッダ・フッタなし） 2026-11-12 */
+/* 月ごと印刷（A4縦・3か月1ページ、ブラウザのヘッダ・フッタなし） 2026-11-12 */
 #printArea{display:none}
 @media print{
- @page{size:A4 landscape;margin:0}
+ @page{size:A4 portrait;margin:0}
  body.printingMonths>*:not(#printArea){display:none!important}
  body.printingMonths #printArea{display:block}
  body.printingMonths{background:#fff;margin:0}
- .pPage{padding:7mm 8mm;height:209mm;box-sizing:border-box;display:flex;flex-direction:column;gap:5mm;page-break-after:always;break-after:page;overflow:hidden}
+ .pPage{padding:8mm 7mm;display:flex;flex-direction:column;gap:6mm;page-break-after:always;break-after:page}
  .pPage:last-child{page-break-after:auto;break-after:auto}
- .pMonth h2{font-size:11pt;margin:0 0 1mm}.pMonth h2 small{font-size:8pt;font-weight:400;margin-left:4mm;color:#444}
+ .pMonth{break-inside:avoid}
+ .pMonth h2{font-size:10.5pt;margin:0 0 1mm}.pMonth h2 small{font-size:7.5pt;font-weight:400;margin-left:4mm;color:#444}
  .pTable{width:100%;min-width:0!important;table-layout:fixed;border-collapse:collapse;font-variant-numeric:tabular-nums}
- .pTable th,.pTable td{border:0.5pt solid #8fa49a!important;padding:0.9mm 0!important;height:auto!important;line-height:1.25;font-size:8.5pt!important;font-weight:600;text-align:center;overflow:hidden;box-shadow:none!important;position:static!important;background:#fff!important;color:#111!important}
- .pTable thead th{background:#dfe9e4!important;font-weight:700}
- .pTable thead th small{display:inline;font-size:6.5pt;margin-left:0.5mm;color:#111!important;padding:0}
- .pTable th:first-child{width:26mm;text-align:left;padding-left:1.5mm!important;font-size:8pt!important;background:#eef3f0!important}
- .pTable tr.sectionRow th{background:#3b5b6b!important;color:#fff!important;text-align:left;padding:0.4mm 2mm!important;font-size:7.5pt!important}
+ .pTable th,.pTable td{border:0.5pt solid #8fa49a!important;padding:1.1mm 0!important;height:auto!important;line-height:1.2;font-size:7.5pt!important;font-weight:600;text-align:center;overflow:hidden;box-shadow:none!important;position:static!important;background:#fff!important;color:#111!important}
+ .pTable thead th{background:#dfe9e4!important;font-weight:700;padding:0.6mm 0!important}
+ .pTable thead th small{display:block;font-size:6pt;color:#111!important;padding:0}
+ .pTable th:first-child{width:21mm;text-align:left;padding-left:1mm!important;font-size:6.8pt!important;background:#eef3f0!important;white-space:nowrap}
+ .pTable tr.sectionRow th{background:#3b5b6b!important;color:#fff!important;text-align:left;padding:0.3mm 1.5mm!important;font-size:6.8pt!important}
  .pTable tr.balance td{font-weight:800;background:#eef4f1!important}
  .pTable td.off,.pTable thead th.off{background:#fde3da!important}
  .pTable td.bad{background:#ffc2ba!important;color:#8b1515!important}
- .pTable td.note{font-size:6pt!important;white-space:nowrap;text-align:left}
+ .pTable td.note{font-size:5.5pt!important;white-space:nowrap;text-align:left}
  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+/* 画面をコンパクトに：上部を詰めてカレンダーをスクロールなしで表示 2026-11-12 */
+@media screen{
+ header{padding:6px 18px}.mark{font-size:24px}.brand{gap:10px}.brand small{display:none}h1{font-size:16px;margin:0}
+ .headerActions button{padding:5px 11px}.status{padding:4px 9px}
+ main{padding:8px 16px}
+ .intro{margin:0 0 6px;align-items:center}.intro .eyebrow,.intro h2{display:none}.intro p{margin:0;font-size:12px}
+ .tools button{padding:4px 10px;font-size:12px}
+ .notice{margin:4px 0 6px;padding:6px 12px}
+ .cards{margin:4px 0 6px}.todayBar{padding:5px 14px;gap:4px 20px}.todayItem b{font-size:18px}
+ .calendarToolbar{padding:6px 12px;gap:12px}.month h3{font-size:17px}.month button{font-size:18px;padding:0 9px}.switch button{padding:5px 16px}
+ .legend{padding:0 12px 6px}
+ #calendar th,#calendar td{height:30px;padding:3px 1px;font-size:13px}
+ #calendar thead th{padding:3px 0}#calendar thead th small{padding-top:0}
+ #calendar tr.sectionRow th{padding:2px 12px;font-size:12px}
+ .footnote{padding:6px 12px}
 }

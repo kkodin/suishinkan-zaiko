@@ -24,7 +24,7 @@
  $('syncState').textContent=connected?'OneDrive共有に接続中':'この端末に保存（未共有）';
  const shown=rows.filter(r=>r.date.startsWith(month)),end=shown.at(-1);let firstShort=rows.find(r=>r.site<0),conflictText=conflicts.length?'同時更新の競合：'+conflicts.map(k=>k==='settings'?'工程設定':k.slice(4)).join('、')+'。該当項目を開き、採用する内容で保存してください。':'';
  $('notice').textContent=conflictText||(mode==='plan'?'計画表示です。数量は「工程の設定」の条件から自動計算しています。日付を押すとその日だけ手入力できます。':'実績表示です。未入力の日は「—」です。残量は入力済み実績だけで集計し、計画値は含めません。');
- $('initialStockNotice').hidden=settings.initialFactory===0;
+ $('notice').hidden=!conflictText;$('initialStockNotice').hidden=settings.initialFactory===0;
  $('initialStockText').textContent='開始前の工場在庫 '+fmt(settings.initialFactory)+'本を加算しています。例：初日の製造2本・出荷0本なら、工場在庫は'+fmt(settings.initialFactory+2)+'本です。製造開始時点の在庫がない場合は0本に修正してください。';
  const today=new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Tokyo'}).format(new Date());
  const factoryAsOfToday=rows.findLast(r=>r.date<=today)?.factory??settings.initialFactory;
@@ -99,7 +99,7 @@
   const months=[];for(let d=new Date(settings.start.slice(0,7)+'-01T00:00:00Z');d.toISOString().slice(0,7)<=settings.end.slice(0,7);d.setUTCMonth(d.getUTCMonth()+1))months.push(d.toISOString().slice(0,7));
   let box=$('printArea');if(!box){box=document.createElement('div');box.id='printArea';document.body.appendChild(box);}
   const block=m=>'<div class="pMonth"><h2>'+m.slice(0,4)+'年 '+Number(m.slice(5))+'月<small>'+esc(settings.name)+'（'+modeLabel()+'）</small></h2><table class="pTable">'+monthTable(m,true)+'</table></div>';
-  let html='';for(let i=0;i<months.length;i+=2)html+='<section class="pPage">'+block(months[i])+(months[i+1]?block(months[i+1]):'')+'</section>';
+  let html='';for(let i=0;i<months.length;i+=3)html+='<section class="pPage">'+months.slice(i,i+3).map(block).join('')+'</section>';
   box.innerHTML=html;
   document.body.classList.add('printingMonths');setTimeout(()=>{print();},50);
  }
