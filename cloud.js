@@ -19,7 +19,17 @@
   const auth=await res.json();if(!res.ok)throw Error(auth.error_description||'ログインに失敗しました');token=auth.access_token;expires=Date.now()+(auth.expires_in-90)*1000;
   const shared=await request('/shares/u!'+b64(new TextEncoder().encode(config.link))+'/driveItem');const item=shared.remoteItem||shared;folder={drive:item.parentReference.driveId,id:item.id};if(!item.folder)throw Error('ファイルではなく共有フォルダのリンクを指定してください。');return folder;
  }
- async function list(){if(!folder)throw Error('共有フォルダに未接続です');let path='/drives/'+encodeURIComponent(folder.drive)+'/items/'+encodeURIComponent(folder.id)+'/children?$top=200&$select=id,name',files=[];while(path){const page=await request(path);files.push(...page.value.filter(f=>/^pipe-event-[0-9a-f-]+\.json$/i.test(f.name)));path=page['@odata.nextLink']?page['@odata.nextLink'].slice(base.length):null;}if(files.length>10000)throw Error('履歴が1万件を超えました。履歴の整理が必要です。');const events=[];for(let i=0;i<files.length;i+=8){const group=await Promise.all(files.slice(i,i+8).map(async f=>{const meta=await request('/drives/'+encodeURIComponent(folder.drive)+'/items/'+encodeURIComponent(f.id)+'?$select=id,@microsoft.graph.downloadUrl');const r=await fetch(meta['@microsoft.graph.downloadUrl'],{cache:'no-store'});if(!r.ok)throw Error('履歴読込に失敗しました');return r.json();}));events.push(...group);}return events;}
+ async function readEvent(file){
+  const label='共有履歴「'+file.name+'」';
+  for(let attempt=0;attempt<2;attempt++){
+   let meta;try{meta=await request('/drives/'+encodeURIComponent(folder.drive)+'/items/'+encodeURIComponent(file.id)+'?$select=id,@microsoft.graph.downloadUrl',{cache:'no-store'});}catch(err){throw Error(label+'の取得準備に失敗：'+err.message);}
+   const url=meta['@microsoft.graph.downloadUrl'];if(!url){if(!attempt)continue;throw Error(label+'の読込用リンクをMicrosoftから取得できませんでした。共有フォルダのアクセス権を確認してください。');}
+   let response;try{response=await fetch(url,{cache:'no-store'});}catch{if(!attempt)continue;throw Error(label+'を取得できませんでした（通信エラー）。入力データは変更していません。接続を確認して「共有データを再取得」を押してください。');}
+   if(!response.ok){if(!attempt&&[401,403,404,408,429,500,502,503,504].includes(response.status))continue;throw Error(label+'の読込に失敗（HTTP '+response.status+'）。'+([401,403].includes(response.status)?'共有フォルダのアクセス権とMicrosoftへの接続を確認してください。':'共有データを再取得してください。')+'履歴は上書きしていません。');}
+   try{return await response.json();}catch{throw Error(label+'をJSONとして読み込めません。該当ファイルの内容を確認してください。履歴は上書きしていません。');}
+  }
+ }
+ async function list(){if(!folder)throw Error('共有フォルダに未接続です');let path='/drives/'+encodeURIComponent(folder.drive)+'/items/'+encodeURIComponent(folder.id)+'/children?$top=200&$select=id,name',files=[];while(path){const page=await request(path);files.push(...page.value.filter(f=>/^pipe-event-[0-9a-f-]+\.json$/i.test(f.name)));path=page['@odata.nextLink']?page['@odata.nextLink'].slice(base.length):null;}if(files.length>10000)throw Error('履歴が1万件を超えました。履歴の整理が必要です。');const events=[];for(let i=0;i<files.length;i+=8){const group=await Promise.all(files.slice(i,i+8).map(async f=>{return readEvent(f);}));events.push(...group);}return events;}
  async function append(event){if(!folder)throw Error('共有フォルダに未接続です');return request('/drives/'+encodeURIComponent(folder.drive)+'/items/'+encodeURIComponent(folder.id)+':/pipe-event-'+event.id+'.json:/content?@microsoft.graph.conflictBehavior=fail',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(event)});}
  function disconnect(){token='';expires=0;folder=null;}
  root.PipeCloud={connect,list,append,disconnect,connected:()=>!!folder&&!!token};
