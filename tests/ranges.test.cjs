@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),P=require('../planning.js');
+const list=[{from:1,to:2,name:'A',purpose:'push'},{from:3,to:103,name:'B',purpose:'pit'},{from:104,to:105,name:'C'}];
+let next=P.linkBoundary(list,0,'to',4);assert.equal(next[1].from,5);assert.equal(next[1].to,103);assert.equal(next[1].purpose,'pit');assert.equal(list[0].to,2);
+next=P.linkBoundary(list,1,'from',5);assert.equal(next[0].to,4);assert.equal(next[2].from,104);
+const pace=[{from:1,to:50,rate:3},{from:51,to:105,rate:2.5}];next=P.linkBoundary(pace,0,'to',60);assert.deepEqual(next,[{from:1,to:60,rate:3},{from:61,to:105,rate:2.5}]);next=P.linkBoundary(pace,1,'from',41);assert.equal(next[0].to,40);assert.equal(next[1].rate,2.5);
+assert.throws(()=>P.linkBoundary(list,0,'to',103));assert.throws(()=>P.linkBoundary(list,1,'from',1));assert.throws(()=>P.linkBoundary(list,0,'from',2));assert.throws(()=>P.linkBoundary(list,0,'to',2.5));
+function field(v){return{value:String(v),error:'',setCustomValidity(e){this.error=e;}};}const pairs=pace.map(r=>({from:field(r.from),to:field(r.to)}));const rows=pairs.map(pair=>({contains:el=>Object.values(pair).includes(el),querySelector:s=>pair[s],querySelectorAll:()=>Object.values(pair)}));const container={querySelectorAll:()=>rows};P.bindRanges(container,'.row','from','to');
+pairs[0].to.value='60';container.oninput({target:pairs[0].to});assert.equal(pairs[1].from.value,61);
+pairs[1].from.value='41';container.oninput({target:pairs[1].from});assert.equal(pairs[0].to.value,40);
+pairs[0].to.value='105';container.oninput({target:pairs[0].to});assert.ok(pairs[0].to.error);assert.equal(pairs[1].from.value,41);
+pairs[0].to.value='50';container.oninput({target:pairs[0].to});assert.equal(pairs[0].to.error,'');assert.equal(pairs[1].from.value,51);
+pairs[0].to.value='';container.oninput({target:pairs[0].to});assert.equal(pairs[1].from.value,51);
+console.log('PASS boundary links: forward/backward, type/pace data preserved, invalid/blank/correction input handling');
