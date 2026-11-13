@@ -32,7 +32,7 @@
   const items=[['工場在庫',v.factory],...(v.transit>0?[['輸送中',v.transit]]:[]),['現場在庫',v.site],['推進済み',v.used],['未施工',v.remaining]];
   $('cards').innerHTML='<div class="todayBar"><span class="todayLabel">'+today.slice(5).replace('-','/')+' 時点（'+modeLabel()+'）</span>'+items.map(([l,n])=>'<span class="todayItem'+(n<0?' negative':'')+'">'+l+'<b>'+fmt(n)+'</b>本</span>').join('')+'<span class="todayTotal">全 '+fmt(settings.total)+' 本</span></div>';}
  directUI.renderCalendar({settings,records,rows,mode,month,today});
- const missing=shown.filter(r=>!r.recorded).length;$('monthNote').textContent=mode==='plan'?'下線のある数量は日別の手入力です。出荷台数は数量÷積載本数の切上げ。現場在庫がマイナスの日は搬入不足です。':'表示期間の実績未入力：'+missing+'日。実績ゼロの日も0を入力して保存してください。';
+ const missing=shown.filter(r=>!r.recorded).length;$('monthNote').textContent=mode==='plan'?'数量・累計・工場在庫の0は空欄。現場在庫の0は施工期間内の現場稼働日のみ表示。下線は日別の手入力です。':'表示期間の実績未入力：'+missing+'日。実績ゼロの日も0を入力して保存してください。';
  $('rulesPreview').innerHTML=settings.rules.map(r=>'<div class="rulePill">'+r.from+'〜'+r.to+'本目　<strong>'+fmt(r.rate)+'本／日</strong></div>').join('');let complete=E.targetTotal(settings)===0?null:rows.find(r=>r.used>=E.targetTotal(settings));$('completion').textContent=modeLabel()+'の施工完了：'+(complete?complete.date:'表示期間内に完了しません');
  let alerts=[];if(conflictText)alerts.push({warn:true,text:conflictText});if(firstShort)alerts.push({warn:true,text:firstShort.date+' から現場残量が不足します（初日 '+fmt(firstShort.site)+'本）'});let others=rows.filter(r=>r.errors.some(e=>e!=='現場在庫不足'));if(others.length)alerts.push({warn:true,text:others[0].date+'：'+others[0].errors.join('、')+'（該当 '+others.length+'日）'});if(!connected)alerts.push({text:'共有未接続です。この端末での入力は業者の画面には反映されません。'});for(const r of shown.filter(r=>r.note).slice(-4))alerts.push({text:r.date+'　'+r.note});if(!alerts.length)alerts.push({text:'数量の不整合・連絡メモはありません。'});if(+month.slice(0,4)<2026||+month.slice(0,4)>2027)alerts.push({warn:true,text:'2028年以降の春分・秋分は計算上の予測日です。公表後に確認してください。'});directUI.renderEditors();renderProposals();$('alerts').innerHTML=alerts.map(a=>'<div class="alert '+(a.warn?'warning':'')+'">'+esc(a.text)+'</div>').join('');
  }
@@ -77,7 +77,7 @@
    const o=records[d]?.[mode]||{},value=r[key],noActual=mode==='actual'&&!r.recorded;let text;
    if(key==='note')text=value||'';
    else if(['production','shipment','arrival','usage','pitUsage'].includes(key))text=(value===0||noActual)?'':fmt(value);
-   else if(key==='arrived'||key==='used')text=value===0?'':fmt(value);
+   else if(key==='arrived'||key==='used'||key==='pitUsed')text=value===0?'':fmt(value);
    else if(key==='factory')text=value===0?'':fmt(value);
    else if(key==='site')text=(value===0&&!(d>=settings.siteStart&&d<=doneDay&&!r.offSite))?'':fmt(value);
    else text=fmt(value);
@@ -139,3 +139,4 @@
  try{events=validateEvents(JSON.parse(localStorage.getItem(STORE)||'[]'));}catch(err){toast('端末保存データを読み込めません。バックアップを確認してください。');events=[];}
  directUI=PipeInteraction({get:()=>({settings,records,rows,mode,month,busy}),saveSettings:next=>save('settings',next),saveActual:async(d,k,v)=>{let r=structuredClone(records[d]||{});r.actual??={};if(v===null)delete r.actual[k];else r.actual[k]=v;return save('day:'+d,r);},render,toast,openDay});rebuild();render();window.PipeApp={getState:()=>({settings:structuredClone(settings),records:structuredClone(records),mode,events:structuredClone(events),conflicts:[...conflicts]})};
 })();
+
