@@ -22,8 +22,16 @@
  async function readEvent(file){
   const label='共有履歴「'+file.name+'」';
   for(let attempt=0;attempt<2;attempt++){
-   let meta;try{meta=await request('/drives/'+encodeURIComponent(folder.drive)+'/items/'+encodeURIComponent(file.id)+'?$select=id,@microsoft.graph.downloadUrl',{cache:'no-store'});}catch(err){throw Error(label+'の取得準備に失敗：'+err.message);}
-   const url=meta['@microsoft.graph.downloadUrl'];if(!url){if(!attempt)continue;throw Error(label+'の読込用リンクをMicrosoftから取得できませんでした。共有フォルダのアクセス権を確認してください。');}
+   const itemPath='/drives/'+encodeURIComponent(folder.drive)+'/items/'+encodeURIComponent(file.id);let meta;try{meta=await request(itemPath+(attempt===0?'?select=id,@microsoft.graph.downloadUrl':''),{cache:'no-store',headers:{Accept:'application/json;odata.metadata=full',Prefer:'odata.include-annotations="*"'}});}catch(err){throw Error(label+'の取得準備に失敗：'+err.message);}
+   let url=meta['@microsoft.graph.downloadUrl']||meta.remoteItem?.['@microsoft.graph.downloadUrl'];if(!url){if(!attempt)continue;
+    if(meta.folder)throw Error(label+'はファイルではなくフォルダのため読めません。既存のデータは変更していません。');
+    const batch=await request('/$batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({requests:[{id:'read',method:'GET',url:itemPath+'/content'}]})});
+    const content=batch.responses?.find(r=>r.id==='read');
+    if(content?.status===200&&content.body&&typeof content.body==='object')return content.body;
+    if(content?.status===200&&typeof content.body==='string'){try{return JSON.parse(content.body);}catch{throw Error(label+'の内容をJSONとして読み込めません。既存のデータは変更していません。');}}
+    if(content?.status===302)url=Object.entries(content.headers||{}).find(([key])=>key.toLowerCase()==='location')?.[1];
+    if(!url)throw Error(label+'の本文取得に失敗（HTTP '+(content?.status??'応答なし')+'）。'+(content?.body?.error?.message||'読込用リンクが返されませんでした。')+'既存のデータは変更していません。');
+   }
    let response;try{response=await fetch(url,{cache:'no-store'});}catch{if(!attempt)continue;throw Error(label+'を取得できませんでした（通信エラー）。入力データは変更していません。接続を確認して「共有データを再取得」を押してください。');}
    if(!response.ok){if(!attempt&&[401,403,404,408,429,500,502,503,504].includes(response.status))continue;throw Error(label+'の読込に失敗（HTTP '+response.status+'）。'+([401,403].includes(response.status)?'共有フォルダのアクセス権とMicrosoftへの接続を確認してください。':'共有データを再取得してください。')+'履歴は上書きしていません。');}
    try{return await response.json();}catch{throw Error(label+'をJSONとして読み込めません。該当ファイルの内容を確認してください。履歴は上書きしていません。');}

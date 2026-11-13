@@ -36,3 +36,5 @@ node tests/planning.test.cjs
 2026-11-13 日進バー修正：区間境界日の時間按分値（例2.833333）と最終日の端数を独立した設定バーにしない。エンジンの数量計算は維持し、日進バーと直接編集欄はその日の開始時点の管番号区間に設定された日進でまとめる（例3、2.5）。31項目の計算試験と旧表示10比較に成功。
 
 2026-11-13 共有履歴の読込エラー対応：取得用リンクをno-storeで再発行し、401/403/404、一時的サーバーエラー、通信失敗は1回だけ再試行。失敗時は対象ファイル名とHTTP番号・通信・JSONを区別して通知。ファイルを無視して不完全な履歴を採用せず、全取得完了まで現表示を保持する既存動作を維持。node tests/cloud.test.cjs の人工通信7項目が成功。利用者の実Microsoftアカウントによる再接続は未検証。実エラーのHTTP番号はまだ取得できておらず、原因を確定した修正ではない。
+
+2026-11-13 続報：実画面でdownloadUrl欠落を確認（フォルダ解決・履歴一覧は成功）。公式のselect形式で取得し、欠落時は項目全体のメタデータを再取得。それでも欠ける場合はGraph JSON batch内のGET /contentから302のLocationを取り出す代替経路を追加（本文200 JSONにも対応）。ブラウザからAuthorization付き/contentのリダイレクトを直接追わない。batchのPOSTに含める操作はGETのみ。履歴のPUT・削除・端末初期化は行わない。人工10ケースが成功。実アカウントの成功確認は再ログイン待ち。参考：https://learn.microsoft.com/en-us/graph/api/driveitem-get-content?view=graph-rest-1.0 と https://learn.microsoft.com/en-us/graph/json-batching
