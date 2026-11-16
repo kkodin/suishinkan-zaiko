@@ -1,0 +1,6 @@
+(function(root){
+ 'use strict';
+ function actor(value){if(!value||typeof value!=='object')return null;const name=typeof value.name==='string'?value.name.slice(0,120):'',username=typeof value.username==='string'?value.username.slice(0,240):'';return name||username?{name:name||username,username}:null;}
+ function timeline(events,audits=[]){const rows=[];for(const e of events||[]){if(!e||typeof e.key!=='string')continue;rows.push({id:e.id,at:e.at||'',actor:actor(e.actor),kind:'save',action:typeof e.summary==='string'&&e.summary?e.summary.slice(0,240):e.key==='settings'?'工程設定・計画を保存':/^day:\d{4}-\d{2}-\d{2}$/.test(e.key)?e.key.slice(4)+' の日別入力・連絡メモを保存':'データを保存'});}for(const e of audits||[]){if(e?.format!=='pipe-audit-v1'||!['login','resume','disconnect','seed'].includes(e.action))continue;rows.push({id:e.id,at:e.at||'',actor:actor(e.actor),kind:e.action==='login'||e.action==='resume'?'login':'save',action:{login:'Microsoftで接続',resume:'保存済みログインから接続を復元',disconnect:'共有から切断',seed:'端末データを共有先へ登録'}[e.action]});}return rows.sort((a,b)=>(Date.parse(b.at)||0)-(Date.parse(a.at)||0)||String(b.id).localeCompare(String(a.id))).slice(0,300);}
+ root.PipeAudit={actor,timeline};if(typeof module!=='undefined')module.exports=root.PipeAudit;
+})(typeof window!=='undefined'?window:globalThis);
